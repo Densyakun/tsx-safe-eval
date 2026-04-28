@@ -1,0 +1,41 @@
+{
+  "name": "tsx-safe-eval",
+  "version": "1.0.0",
+  "description": "Safe evaluation of TSX code strings using ts-morph",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --watch --dts",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "path-browserify": "^1.0.1",
+    "ts-morph": "^25.0.0"
+  },
+  "devDependencies": {
+    "@types/path-browserify": "^1.0.3",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3"
+  },
+  "keywords": [
+    "tsx",
+    "eval",
+    "safe",
+    "interpreter",
+    "ts-morph"
+  ],
+  "author": "",
+  "license": "MIT"
+}
