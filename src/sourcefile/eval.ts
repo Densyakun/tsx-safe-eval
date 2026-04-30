@@ -408,6 +408,9 @@ export function evalExpression(syntax: TSTextNodeType | TSNodeType, variables: {
         args.push(evalExpression(syntaxList.children[n] as TSNodeType, variables)?.value);
     }
 
+    if (typeof func !== "function")
+      throw new Error(`TypeError: ${addChildCodeTextForLog(syntax.children[0])} is not a function`);
+
     return { value: func(...args), assignmentFunc: undefined };
   } else if (syntax.kind === "ParenthesizedExpression") {
     return evalExpression(syntax.children[1] as TSNodeType, variables);
@@ -615,7 +618,7 @@ export function evalObjectBindingPattern(objectBindingPattern: TSNodeType, varia
 }
 
 export function addChildCodeTextForLog(nodeJson: TSNodeType, text = "") {
-  if (nodeJson.children)
+  if (nodeJson.children.length)
     nodeJson.children.forEach(childJson => text += addChildCodeTextForLog(childJson));
   else
     text += (nodeJson as TSTextNodeType).text;
