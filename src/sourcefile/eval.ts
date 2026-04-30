@@ -1,5 +1,4 @@
-import { SyntaxKind } from "ts-morph";
-import type { TSNodeType, TSTextNodeType } from "./type";
+import type { TSNodeType, TSTextNodeType } from "./types";
 
 // TODO JSX
 // TODO varの再宣言と関数スコープ

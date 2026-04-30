@@ -1,6 +1,6 @@
 import { createArrayWithOnlyFirstKey } from 'i-want-to-go-home';
 import { Node, SourceFile, SyntaxKind, SyntaxList } from 'ts-morph';
-import { TSNodeType, TSSourceFileType, TSSyntaxListType, TSTextNodeType, TSTextNodeKindString, TSTextNodeKindArray } from './type';
+import { TSNodeType, TSSourceFileType, TSSyntaxListType, TSTextNodeType, TSTextNodeKindString, TSTextNodeKindArray } from './types';
 
 export const FirstKindNames = createArrayWithOnlyFirstKey(SyntaxKind);
 
