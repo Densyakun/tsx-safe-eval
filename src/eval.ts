@@ -40,17 +40,17 @@ export function evalVariableDeclarationList(variableDeclarationList: TSNodeType,
     const variableDeclaration = syntaxList.children[n] as TSNodeType;
 
     // TODO ArrayBindingPattern
-    if (variableDeclaration.children[0].kind === SyntaxKind.Identifier) {
+    if (variableDeclaration.children[0].kind === "Identifier") {
       const identifier = variableDeclaration.children[0] as TSTextNodeType;
 
       variables[variables.length - 1][identifier.text] = variableDeclaration.children.length === 1
-        || variableDeclaration.children.length < 5 && variableDeclaration.children[1].kind === SyntaxKind.ColonToken
+        || variableDeclaration.children.length < 5 && variableDeclaration.children[1].kind === "ColonToken"
         ? undefined
         : evalExpression(variableDeclaration.children[3 < variableDeclaration.children.length ? 4 : 2], variables)?.value;
 
       if (isExport)
         exportProps[identifier.text] = variables[variables.length - 1][identifier.text];
-    } else if (variableDeclaration.children[0].kind === SyntaxKind.ObjectBindingPattern)
+    } else if (variableDeclaration.children[0].kind === "ObjectBindingPattern")
       evalObjectBindingPattern(
         variableDeclaration.children[0] as TSNodeType,
         variables,
@@ -64,25 +64,25 @@ export function evalVariableDeclarationList(variableDeclarationList: TSNodeType,
 }
 
 export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [key: string]: any }[], modules: { [key: string]: ModuleType } = {}): ExportAndReturnValueType {
-  if (syntax.kind === SyntaxKind.FirstStatement) {
-    let isExport = syntax.children[0].kind === SyntaxKind.SyntaxList;
+  if (syntax.kind === "VariableStatement") {
+    let isExport = syntax.children[0].kind === "SyntaxList";
 
     const exportProps = evalVariableDeclarationList(syntax.children[isExport ? 1 : 0] as TSNodeType, variables, isExport);
 
     // TODO リテラルの値を正しく共有する
     return { exports: { object: exportProps } };
-  } else if (syntax.kind === SyntaxKind.ExpressionStatement) {
+  } else if (syntax.kind === "ExpressionStatement") {
     evalExpression(syntax.children[0] as TSNodeType, variables);
-  } else if (syntax.kind === SyntaxKind.IfStatement) {
+  } else if (syntax.kind === "IfStatement") {
     if (evalExpression(syntax.children[2] as TSNodeType, variables)?.value) {
       const res = evalBlockOrSyntax(syntax.children[4] as TSNodeType, variables);
       if (Object.keys(res).includes("value")) return res;
     } else if (syntax.children.length === 7)
       return evalBlockOrSyntax(syntax.children[6] as TSNodeType, variables);
-  } else if (syntax.kind === SyntaxKind.ForStatement) {
+  } else if (syntax.kind === "ForStatement") {
     variables.push({});
 
-    if (syntax.children[2].kind === SyntaxKind.VariableDeclarationList)
+    if (syntax.children[2].kind === "VariableDeclarationList")
       evalVariableDeclarationList(syntax.children[2] as TSNodeType, variables);
     else
       evalSyntax(syntax.children[2] as TSNodeType, variables, modules);
@@ -99,7 +99,7 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
     variables.pop();
 
     if (res && Object.keys(res).includes("value")) return res;
-  } else if (syntax.kind === SyntaxKind.ForOfStatement) {
+  } else if (syntax.kind === "ForOfStatement") {
     const variableDeclarationList = syntax.children[2] as TSNodeType;
 
     const syntaxList = variableDeclarationList.children[1];
@@ -122,23 +122,23 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
     }
 
     if (res && Object.keys(res).includes("value")) return res;
-  } else if (syntax.kind === SyntaxKind.ReturnStatement) {
+  } else if (syntax.kind === "ReturnStatement") {
     return {
       exports: {},
-      value: syntax.children.length < 3 && syntax.children[1].kind === SyntaxKind.SemicolonToken || syntax.children.length === 1
+      value: syntax.children.length < 3 && syntax.children[1].kind === "SemicolonToken" || syntax.children.length === 1
         ? undefined
         : evalExpression(syntax.children[1] as TSNodeType, variables)?.value
     };
-  } else if (syntax.kind === SyntaxKind.FunctionDeclaration) {
+  } else if (syntax.kind === "FunctionDeclaration") {
     let isExport = 0;
 
     let n = 0;
-    if (syntax.children[0].kind === SyntaxKind.SyntaxList) {
+    if (syntax.children[0].kind === "SyntaxList") {
       n++;
 
       const syntaxList = syntax.children[0];
-      if (syntaxList.children[0].kind === SyntaxKind.ExportKeyword)
-        isExport = 1 < syntaxList.children.length && syntaxList.children[1].kind === SyntaxKind.DefaultKeyword
+      if (syntaxList.children[0].kind === "ExportKeyword")
+        isExport = 1 < syntaxList.children.length && syntaxList.children[1].kind === "DefaultKeyword"
           ? 2
           : 1;
     }
@@ -159,7 +159,7 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
           : { object: { [identifier.text]: variables[variables.length - 1][identifier.text] } }
         : {}
     };
-  } else if (syntax.kind === SyntaxKind.ImportDeclaration) {
+  } else if (syntax.kind === "ImportDeclaration") {
     if (syntax.children.length < 4) return { exports: {} };
 
     const moduleName = evalStringLiteral(syntax.children[3] as TSTextNodeType);
@@ -167,27 +167,27 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
     const module = modules[moduleName];
 
     const importClause = syntax.children[1] as TSNodeType;
-    if (importClause.children[0].kind === SyntaxKind.TypeKeyword) return { exports: {} };
+    if (importClause.children[0].kind === "TypeKeyword") return { exports: {} };
 
     if (!module) throw new Error(`Module '${moduleName}' is undefined`);
 
     let n = 0;
-    if (importClause.children[0].kind === SyntaxKind.Identifier) {
+    if (importClause.children[0].kind === "Identifier") {
       variables[0][(importClause.children[0] as TSTextNodeType).text] = module.default;
       if (importClause.children.length < 2) return { exports: {} };
       n += 2;
     }
-    if (importClause.children[n].kind === SyntaxKind.NamespaceImport) {
+    if (importClause.children[n].kind === "NamespaceImport") {
       const namespaceImport = importClause.children[n] as TSNodeType;
       variables[0][(namespaceImport.children[2] as TSTextNodeType).text] = module.object;
-    } else if (importClause.children[n].kind === SyntaxKind.NamedImports) {
+    } else if (importClause.children[n].kind === "NamedImports") {
       const namedImports = importClause.children[n] as TSNodeType;
       const syntaxList = namedImports.children[1];
 
       for (let n = 0; n < syntaxList.children.length; n += 2) {
         const importSpecifier = syntaxList.children[n];
         const identifier = importSpecifier.children[0] as TSTextNodeType;
-        const identifierText = identifier.kind === SyntaxKind.StringLiteral ? evalStringLiteral(identifier) : identifier.text;
+        const identifierText = identifier.kind === "StringLiteral" ? evalStringLiteral(identifier) : identifier.text;
         if (importSpecifier.children.length == 1)
           variables[0][identifierText] = module.object![identifierText];
         else if (importSpecifier.children.length == 3) {
@@ -201,13 +201,13 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
         }
       }
     }
-  } else if (syntax.kind === SyntaxKind.ExportAssignment) {
+  } else if (syntax.kind === "ExportAssignment") {
     // TODO リテラルの値を正しく共有する
     return { exports: { default: evalExpression(syntax.children[2] as TSNodeType, variables)?.value } };
-  } else if (syntax.kind === SyntaxKind.ExportDeclaration) {
+  } else if (syntax.kind === "ExportDeclaration") {
     const exports: ModuleType = { object: {} };
 
-    if (syntax.children[1].kind === SyntaxKind.AsteriskToken) {
+    if (syntax.children[1].kind === "AsteriskToken") {
       const moduleName = evalStringLiteral(syntax.children[3] as TSTextNodeType);
       const module = modules[moduleName];
 
@@ -216,7 +216,7 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
         exports.default = module.default;
       if (module.object)
         exports.object = module.object;
-    } else if (syntax.children[1].kind === SyntaxKind.NamedExports) {
+    } else if (syntax.children[1].kind === "NamedExports") {
       const syntaxList = syntax.children[1].children[1];
 
       if (syntax.children.length < 4) {
@@ -231,7 +231,7 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
               exports.object![identifier.text] = getVariableValue(variables, identifier.text);
           } else {
             const identifier1 = exportSpecifier.children[2] as TSTextNodeType;
-            const identifier1Text = identifier1.kind === SyntaxKind.StringLiteral ? evalStringLiteral(identifier1) : identifier1.text;
+            const identifier1Text = identifier1.kind === "StringLiteral" ? evalStringLiteral(identifier1) : identifier1.text;
 
             // TODO リテラルの値を正しく共有する
             if (identifier1Text === "default")
@@ -273,7 +273,7 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
           }
         }
       }
-    } else if (syntax.children[1].kind === SyntaxKind.NamespaceExport) {
+    } else if (syntax.children[1].kind === "NamespaceExport") {
       const moduleName = evalStringLiteral(syntax.children[3] as TSTextNodeType);
       const module = modules[moduleName];
 
@@ -293,7 +293,7 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
           ? { default: exports.default }
           : {}
     };
-  } else if (syntax.kind !== SyntaxKind.TypeAliasDeclaration)
+  } else if (syntax.kind !== "TypeAliasDeclaration")
     return { exports: {}, value: evalExpression(syntax, variables)?.value };
 
   return { exports: {} };
@@ -332,50 +332,50 @@ export function assignVariable(variables: { [key: string]: any }[], key: string,
 }
 
 export function evalExpression(syntax: TSTextNodeType | TSNodeType, variables: { [key: string]: any }[]): { value: any, assignmentFunc: ((value: any) => any) | undefined } | undefined {
-  if (syntax.kind === SyntaxKind.NumericLiteral) {
+  if (syntax.kind === "NumericLiteral") {
     return { value: Number((syntax as TSTextNodeType).text), assignmentFunc: undefined };
-  } else if (syntax.kind === SyntaxKind.StringLiteral) {
+  } else if (syntax.kind === "StringLiteral") {
     return { value: evalStringLiteral(syntax as TSTextNodeType), assignmentFunc: undefined };
-  } else if (syntax.kind === SyntaxKind.Identifier) {
+  } else if (syntax.kind === "Identifier") {
     return { value: getVariableValue(variables, (syntax as TSTextNodeType).text), assignmentFunc: (value: any) => assignVariable(variables, (syntax as TSTextNodeType).text, value) };
-  } else if (syntax.kind === SyntaxKind.ComputedPropertyName) {
+  } else if (syntax.kind === "ComputedPropertyName") {
     return evalExpression(syntax.children[1] as TSNodeType, variables);
-  } else if (syntax.kind === SyntaxKind.ArrayLiteralExpression) {
+  } else if (syntax.kind === "ArrayLiteralExpression") {
     const syntaxList = syntax.children[1];
 
     const list: any[] = [];
     for (let n = 0; n < syntaxList.children.length; n += 2) {
-      if (syntaxList.children[n].kind === SyntaxKind.SpreadElement)
+      if (syntaxList.children[n].kind === "SpreadElement")
         list.push(...evalExpression(syntaxList.children[n].children[1] as TSNodeType, variables)?.value);
       else
         list.push(evalExpression(syntaxList.children[n] as TSNodeType, variables)?.value);
     }
 
     return { value: list, assignmentFunc: undefined };
-  } else if (syntax.kind === SyntaxKind.ObjectLiteralExpression) {
+  } else if (syntax.kind === "ObjectLiteralExpression") {
     const syntaxList = syntax.children[1];
 
     // TODO スプレッド構文
     const object: any = {};
     for (let n = 0; n < syntaxList.children.length; n += 2) {
-      if (syntaxList.children[n].kind === SyntaxKind.PropertyAssignment) {
+      if (syntaxList.children[n].kind === "PropertyAssignment") {
         const identifierOrComputedPropertyName = syntaxList.children[n].children[0] as TSNodeType;
         object[
-          identifierOrComputedPropertyName.kind === SyntaxKind.Identifier
+          identifierOrComputedPropertyName.kind === "Identifier"
             ? (identifierOrComputedPropertyName as TSTextNodeType).text
             : evalExpression(identifierOrComputedPropertyName, variables)?.value
         ] = evalExpression(syntaxList.children[n].children[2] as TSNodeType, variables)?.value;
-      } else if (syntaxList.children[n].kind === SyntaxKind.ShorthandPropertyAssignment) {
+      } else if (syntaxList.children[n].kind === "ShorthandPropertyAssignment") {
         const identifier = syntaxList.children[n].children[0] as TSTextNodeType;
         object[identifier.text] = evalExpression(identifier, variables)?.value;
       }
     }
 
     return { value: object, assignmentFunc: undefined };
-  } else if (syntax.kind === SyntaxKind.PropertyAccessExpression) {
+  } else if (syntax.kind === "PropertyAccessExpression") {
     const object = evalExpression(syntax.children[0] as TSNodeType, variables)?.value;
     if (object === undefined)
-      if (syntax.children[1].kind === SyntaxKind.DotToken)
+      if (syntax.children[1].kind === "DotToken")
         throw new Error(`${addChildCodeTextForLog(syntax.children[0])} is undefined`);
       else
         return {
@@ -391,148 +391,148 @@ export function evalExpression(syntax: TSTextNodeType | TSNodeType, variables: {
           : newValue,
       assignmentFunc: (value: any) => object[(syntax.children[2] as TSTextNodeType).text] = value
     };
-  } else if (syntax.kind === SyntaxKind.ElementAccessExpression) {
+  } else if (syntax.kind === "ElementAccessExpression") {
     const expression = evalExpression(syntax.children[0] as TSNodeType, variables);
     const expression1 = evalExpression(syntax.children[2] as TSNodeType, variables);
 
     return { value: expression!.value[expression1!.value], assignmentFunc: (value: any) => expression!.value[expression1!.value] = value };
-  } else if (syntax.kind === SyntaxKind.CallExpression) {
+  } else if (syntax.kind === "CallExpression") {
     const func = evalExpression(syntax.children[0] as TSNodeType, variables)?.value;
 
     const syntaxList = syntax.children[2];
 
     const args: any[] = [];
     for (let n = 0; n < syntaxList.children.length; n += 2) {
-      if (syntaxList.children[n].kind === SyntaxKind.SpreadElement) {
+      if (syntaxList.children[n].kind === "SpreadElement") {
         args.push(...evalExpression(syntaxList.children[n].children[1] as TSNodeType, variables)?.value);
       } else
         args.push(evalExpression(syntaxList.children[n] as TSNodeType, variables)?.value);
     }
 
     return { value: func(...args), assignmentFunc: undefined };
-  } else if (syntax.kind === SyntaxKind.ParenthesizedExpression) {
+  } else if (syntax.kind === "ParenthesizedExpression") {
     return evalExpression(syntax.children[1] as TSNodeType, variables);
-  } else if (syntax.kind === SyntaxKind.PrefixUnaryExpression) {
-    if (syntax.children[0].kind === SyntaxKind.PlusToken)
+  } else if (syntax.kind === "PrefixUnaryExpression") {
+    if (syntax.children[0].kind === "PlusToken")
       return { value: +evalExpression(syntax.children[1] as TSNodeType, variables)?.value, assignmentFunc: undefined };
-    else if (syntax.children[0].kind === SyntaxKind.MinusToken)
+    else if (syntax.children[0].kind === "MinusToken")
       return { value: -evalExpression(syntax.children[1] as TSNodeType, variables)?.value, assignmentFunc: undefined };
-    else if (syntax.children[0].kind === SyntaxKind.PlusPlusToken) {
+    else if (syntax.children[0].kind === "PlusPlusToken") {
       const right = evalExpression(syntax.children[1] as TSNodeType, variables);
       return { value: right?.assignmentFunc!(++right.value), assignmentFunc: undefined };
-    } else if (syntax.children[0].kind === SyntaxKind.MinusMinusToken) {
+    } else if (syntax.children[0].kind === "MinusMinusToken") {
       const right = evalExpression(syntax.children[1] as TSNodeType, variables);
       return { value: right?.assignmentFunc!(--right.value), assignmentFunc: undefined };
-    } else if (syntax.children[0].kind === SyntaxKind.ExclamationToken)
+    } else if (syntax.children[0].kind === "ExclamationToken")
       return { value: !evalExpression(syntax.children[1] as TSNodeType, variables)?.value, assignmentFunc: undefined };
-    else if (syntax.children[0].kind === SyntaxKind.TildeToken)
+    else if (syntax.children[0].kind === "TildeToken")
       return { value: ~evalExpression(syntax.children[1] as TSNodeType, variables)?.value, assignmentFunc: undefined };
     else
-      throw new Error(SyntaxKind[syntax.children[0].kind]);
-  } else if (syntax.kind === SyntaxKind.PostfixUnaryExpression) {
-    if (syntax.children[1].kind === SyntaxKind.PlusPlusToken) {
+      throw new Error();
+  } else if (syntax.kind === "PostfixUnaryExpression") {
+    if (syntax.children[1].kind === "PlusPlusToken") {
       const left = evalExpression(syntax.children[0] as TSNodeType, variables);
       const value = left?.value;
       left?.assignmentFunc!(++left.value);
       return { value, assignmentFunc: undefined };
-    } else if (syntax.children[1].kind === SyntaxKind.MinusMinusToken) {
+    } else if (syntax.children[1].kind === "MinusMinusToken") {
       const left = evalExpression(syntax.children[0] as TSNodeType, variables);
       const value = left?.value;
       left?.assignmentFunc!(--left.value);
       return { value, assignmentFunc: undefined };
     } else
-      throw new Error(SyntaxKind[syntax.children[1].kind]);
-  } else if (syntax.kind === SyntaxKind.BinaryExpression) {
+      throw new Error();
+  } else if (syntax.kind === "BinaryExpression") {
     const left = evalExpression(syntax.children[0] as TSNodeType, variables);
     const right = evalExpression(syntax.children[2] as TSNodeType, variables);
 
-    if (syntax.children[1].kind === SyntaxKind.CommaToken)
+    if (syntax.children[1].kind === "CommaToken")
       return { value: right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.FirstBinaryOperator)
+    else if (syntax.children[1].kind === "LessThanToken")
       return { value: left?.value < right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.GreaterThanToken)
+    else if (syntax.children[1].kind === "GreaterThanToken")
       return { value: left?.value > right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.LessThanEqualsToken)
+    else if (syntax.children[1].kind === "LessThanEqualsToken")
       return { value: left?.assignmentFunc!(left.value < right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.GreaterThanEqualsToken)
+    else if (syntax.children[1].kind === "GreaterThanEqualsToken")
       return { value: left?.assignmentFunc!(left.value > right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.EqualsEqualsToken)
+    else if (syntax.children[1].kind === "EqualsEqualsToken")
       return { value: left?.value == right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.ExclamationEqualsToken)
+    else if (syntax.children[1].kind === "ExclamationEqualsToken")
       return { value: left?.value != right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.EqualsEqualsEqualsToken)
+    else if (syntax.children[1].kind === "EqualsEqualsEqualsToken")
       return { value: left?.value === right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.ExclamationEqualsEqualsToken)
+    else if (syntax.children[1].kind === "ExclamationEqualsEqualsToken")
       return { value: left?.value !== right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.PlusToken)
+    else if (syntax.children[1].kind === "PlusToken")
       return { value: left?.value + right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.MinusToken)
+    else if (syntax.children[1].kind === "MinusToken")
       return { value: left?.value - right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.AsteriskToken)
+    else if (syntax.children[1].kind === "AsteriskToken")
       return { value: left?.value * right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.AsteriskAsteriskToken)
+    else if (syntax.children[1].kind === "AsteriskAsteriskToken")
       return { value: left?.value ** right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.SlashToken)
+    else if (syntax.children[1].kind === "SlashToken")
       return { value: left?.value / right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.PercentToken)
+    else if (syntax.children[1].kind === "PercentToken")
       return { value: left?.value % right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.LessThanLessThanToken)
+    else if (syntax.children[1].kind === "LessThanLessThanToken")
       return { value: left?.value << right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.GreaterThanGreaterThanToken)
+    else if (syntax.children[1].kind === "GreaterThanGreaterThanToken")
       return { value: left?.value >> right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.GreaterThanGreaterThanGreaterThanToken)
+    else if (syntax.children[1].kind === "GreaterThanGreaterThanGreaterThanToken")
       return { value: left?.value >>> right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.AmpersandToken)
+    else if (syntax.children[1].kind === "AmpersandToken")
       return { value: left?.value & right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.BarToken)
+    else if (syntax.children[1].kind === "BarToken")
       return { value: left?.value | right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.CaretToken)
+    else if (syntax.children[1].kind === "CaretToken")
       return { value: left?.value ^ right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.AmpersandAmpersandToken)
+    else if (syntax.children[1].kind === "AmpersandAmpersandToken")
       return { value: left?.value && right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.BarBarToken)
+    else if (syntax.children[1].kind === "BarBarToken")
       return { value: left?.value || right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.QuestionQuestionToken)
+    else if (syntax.children[1].kind === "QuestionQuestionToken")
       return { value: left?.value ?? right?.value, assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.EqualsToken)
+    else if (syntax.children[1].kind === "EqualsToken")
       return { value: left?.assignmentFunc!(right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.PlusEqualsToken)
+    else if (syntax.children[1].kind === "PlusEqualsToken")
       return { value: left?.assignmentFunc!(left.value + right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.MinusEqualsToken)
+    else if (syntax.children[1].kind === "MinusEqualsToken")
       return { value: left?.assignmentFunc!(left.value - right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.AsteriskEqualsToken)
+    else if (syntax.children[1].kind === "AsteriskEqualsToken")
       return { value: left?.assignmentFunc!(left.value * right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.AsteriskAsteriskEqualsToken)
+    else if (syntax.children[1].kind === "AsteriskAsteriskEqualsToken")
       return { value: left?.assignmentFunc!(left.value ** right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.SlashEqualsToken)
+    else if (syntax.children[1].kind === "SlashEqualsToken")
       return { value: left?.assignmentFunc!(left.value / right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.PercentEqualsToken)
+    else if (syntax.children[1].kind === "PercentEqualsToken")
       return { value: left?.assignmentFunc!(left.value % right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.LessThanLessThanEqualsToken)
+    else if (syntax.children[1].kind === "LessThanLessThanEqualsToken")
       return { value: left?.assignmentFunc!(left.value << right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.GreaterThanGreaterThanEqualsToken)
+    else if (syntax.children[1].kind === "GreaterThanGreaterThanEqualsToken")
       return { value: left?.assignmentFunc!(left.value >> right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.GreaterThanGreaterThanGreaterThanEqualsToken)
+    else if (syntax.children[1].kind === "GreaterThanGreaterThanGreaterThanEqualsToken")
       return { value: left?.assignmentFunc!(left.value >>> right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.AmpersandEqualsToken)
+    else if (syntax.children[1].kind === "AmpersandEqualsToken")
       return { value: left?.assignmentFunc!(left.value & right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.BarEqualsToken)
+    else if (syntax.children[1].kind === "BarEqualsToken")
       return { value: left?.assignmentFunc!(left.value | right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.BarBarEqualsToken)
+    else if (syntax.children[1].kind === "BarBarEqualsToken")
       return { value: left?.assignmentFunc!(left.value || right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.AmpersandAmpersandEqualsToken)
+    else if (syntax.children[1].kind === "AmpersandAmpersandEqualsToken")
       return { value: left?.assignmentFunc!(left.value && right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.QuestionQuestionEqualsToken)
+    else if (syntax.children[1].kind === "QuestionQuestionEqualsToken")
       return { value: left?.assignmentFunc!(left.value ?? right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.CaretEqualsToken)
+    else if (syntax.children[1].kind === "CaretEqualsToken")
       return { value: left?.assignmentFunc!(left.value ^ right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.InKeyword)
+    else if (syntax.children[1].kind === "InKeyword")
       return { value: left?.assignmentFunc!(left.value in right?.value), assignmentFunc: undefined };
-    else if (syntax.children[1].kind === SyntaxKind.InstanceOfKeyword)
+    else if (syntax.children[1].kind === "InstanceOfKeyword")
       return { value: left?.assignmentFunc!(left.value instanceof right?.value), assignmentFunc: undefined };
     else
-      throw new Error(SyntaxKind[syntax.children[1].kind]);
-  } else if (syntax.kind === SyntaxKind.ArrowFunction) {
+      throw new Error();
+  } else if (syntax.kind === "ArrowFunction") {
     return {
       value: getFunc(
         syntax.children[3 < syntax.children.length ? 4 : 2] as TSNodeType,
@@ -540,18 +540,18 @@ export function evalExpression(syntax: TSTextNodeType | TSNodeType, variables: {
         cloneScope(variables)
       ), assignmentFunc: undefined
     };
-  } else if (syntax.kind === SyntaxKind.ConditionalExpression) {
+  } else if (syntax.kind === "ConditionalExpression") {
     return evalExpression(syntax.children[0] as TSNodeType, variables)?.value
       ? evalExpression(syntax.children[2] as TSNodeType, variables)
       : evalExpression(syntax.children[4] as TSNodeType, variables);
-  } else if (syntax.kind === SyntaxKind.AsExpression) {
+  } else if (syntax.kind === "AsExpression") {
     return evalExpression(syntax.children[0] as TSNodeType, variables);
-  } else if (syntax.kind === SyntaxKind.NonNullExpression) {
+  } else if (syntax.kind === "NonNullExpression") {
     return evalExpression(syntax.children[0] as TSNodeType, variables);
-  }/* else if (syntax.kind === SyntaxKind.VariableDeclarationList) {
+  }/* else if (syntax.kind === "VariableDeclarationList") {
     // TODO
   }*/ else
-    throw new Error(SyntaxKind[syntax.kind]);
+    throw new Error(syntax.kind);
 }
 
 export function cloneScope(variables: { [key: string]: any }[]) {
@@ -563,7 +563,7 @@ export function cloneScope(variables: { [key: string]: any }[]) {
 }
 
 export function evalBlockOrSyntax(node: TSNodeType, variables: { [key: string]: any }[]): ExportAndReturnValueType {
-  if (node.kind === SyntaxKind.Block) {
+  if (node.kind === "Block") {
     variables.push({});
 
     let res = evalSyntaxList(node.children[1], variables);
@@ -579,9 +579,9 @@ export function getFunc(blockOrSyntax: TSNodeType, parametersSyntaxList: TSNodeT
     variables.push({});
     for (let n = 0; n < args.length && n * 2 < parametersSyntaxList.children.length; n++) {
       const parameter = parametersSyntaxList.children[n * 2] as TSNodeType;
-      if (parameter.children[0].kind === SyntaxKind.Identifier)
+      if (parameter.children[0].kind === "Identifier")
         variables[variables.length - 1][(parameter.children[0] as TSTextNodeType).text] = args[n];
-      else if (parameter.children[0].kind === SyntaxKind.ObjectBindingPattern)
+      else if (parameter.children[0].kind === "ObjectBindingPattern")
         evalObjectBindingPattern(parameter.children[0] as TSNodeType, variables, args[n]);
     }
 
@@ -598,12 +598,12 @@ export function evalObjectBindingPattern(objectBindingPattern: TSNodeType, varia
     const bindingElement = syntaxList.children[o] as TSNodeType;
     if (2 < bindingElement.children.length) {
       const identifier = bindingElement.children[0] as TSTextNodeType;
-      if (bindingElement.children[2].kind === SyntaxKind.Identifier) {
+      if (bindingElement.children[2].kind === "Identifier") {
         variables[variables.length - 1][(bindingElement.children[2] as TSTextNodeType).text] = object[identifier.text];
 
         if (isExport)
           exportProps[identifier.text] = variables[variables.length - 1][(bindingElement.children[2] as TSTextNodeType).text];
-      } else if (bindingElement.children[2].kind === SyntaxKind.ObjectBindingPattern)
+      } else if (bindingElement.children[2].kind === "ObjectBindingPattern")
         evalObjectBindingPattern(bindingElement.children[2] as TSNodeType, variables, object[identifier.text], exportProps, isExport);
     } else {
       const identifier = bindingElement.children[0] as TSTextNodeType;
@@ -632,16 +632,16 @@ export function getDependentModuleNames(syntaxList: TSNodeType) {
   const modules: string[] = [];
 
   for (const syntax of syntaxList.children) {
-    if (syntax.kind === SyntaxKind.ImportDeclaration) {
+    if (syntax.kind === "ImportDeclaration") {
       if (syntax.children.length >= 4)
         modules.push(evalStringLiteral(syntax.children[3] as TSTextNodeType));
-    } else if (syntax.kind === SyntaxKind.ExportDeclaration) {
-      if (syntax.children[1].kind === SyntaxKind.AsteriskToken)
+    } else if (syntax.kind === "ExportDeclaration") {
+      if (syntax.children[1].kind === "AsteriskToken")
         modules.push(evalStringLiteral(syntax.children[3] as TSTextNodeType));
-      else if (syntax.children[1].kind === SyntaxKind.NamedExports) {
+      else if (syntax.children[1].kind === "NamedExports") {
         if (syntax.children.length >= 4)
           modules.push(evalStringLiteral(syntax.children[3] as TSTextNodeType));
-      } else if (syntax.children[1].kind === SyntaxKind.NamespaceExport)
+      } else if (syntax.children[1].kind === "NamespaceExport")
         modules.push(evalStringLiteral(syntax.children[3] as TSTextNodeType));
     }
   }

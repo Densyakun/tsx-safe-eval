@@ -4,6 +4,7 @@
     "": {
       "name": "tsx-safe-eval",
       "dependencies": {
+        "i-want-to-go-home": "^0.1.0",
         "path-browserify": "^1.0.1",
         "ts-morph": "^25.0.0",
       },
@@ -178,6 +179,8 @@
     "fsevents": ["fsevents@2.3.3", "", { "os": "darwin" }, "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw=="],
 
     "glob-parent": ["glob-parent@5.1.2", "", { "dependencies": { "is-glob": "^4.0.1" } }, "sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow=="],
+
+    "i-want-to-go-home": ["i-want-to-go-home@0.1.0", "", {}, "sha512-HD+wzqwVN+Ll6WV6HcHw1Qeoi4Yw40X8FUUQaQuaP4iMKL1n33gQhC4x/oU+I4G6nd5QKbqBBcQeRNe50luuHA=="],
 
     "is-extglob": ["is-extglob@2.1.1", "", {}, "sha512-SbKbANkN603Vi4jEZv49LeVJMn4yGwsbzZworEoyEiutsN3nJYdbO36zfhGJ6QEDpOZIFkDtnq5JRxmvl3jsoQ=="],
 
