@@ -1,5 +1,5 @@
 import { loadProject, saveProject, ProjectContext } from '../src/project';
-import { getFromSourceFile } from '../src/sourcefile/compiler';
+import { compileSourceFileToJSON } from '../src/sourcefile/compiler';
 import { Project } from 'ts-morph';
 import path from 'path';
 
@@ -48,7 +48,7 @@ describe('Project IO', () => {
     const newSourceFile = tempProject.createSourceFile("src/test.ts", newTsCode);
     
     // ASTのJSON表現を取得して projectData に追加
-    projectData.sourceFiles['src/test.ts'] = getFromSourceFile(newSourceFile);
+    projectData.sourceFiles['src/test.ts'] = compileSourceFileToJSON(newSourceFile);
 
     // 5. プロジェクトの保存テスト
     await saveProject(tsConfigPath, projectData, context);

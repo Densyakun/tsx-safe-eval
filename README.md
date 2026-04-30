@@ -17,12 +17,12 @@ npm install tsx-safe-eval
 ## 使い方
 
 ```typescript
-import { evalSyntaxList, getFromSourceFile } from 'tsx-safe-eval';
+import { evalSyntaxList, compileSourceFileToJSON } from 'tsx-safe-eval';
 import { Project } from 'ts-morph';
 
 const project = new Project({ useInMemoryFileSystem: true });
 const sourceFile = project.createSourceFile("test.ts", "export const a = 1 + 2;");
-const sourceFileJson = getFromSourceFile(sourceFile);
+const sourceFileJson = compileSourceFileToJSON(sourceFile);
 
 const variables = [{}]; // スコープ
 const modules = {};    // インポート可能なモジュール

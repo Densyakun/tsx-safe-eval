@@ -1,7 +1,7 @@
-import { TSSourceFilesType, TSSourceFileType } from './sourcefile/types';
+import { TSSourceFilesJSONType, TSSourceFileJSONType } from './sourcefile/types';
 import { TSConfig, TSProjectType } from './types';
 import { Project, ProjectOptions } from 'ts-morph';
-import { addFullText, getFromSourceFile } from './sourcefile/compiler';
+import { generateTextFromJSON, compileSourceFileToJSON } from './sourcefile/compiler';
 import normalizePath from "normalize-path";
 import stripJsonComments from 'strip-json-comments';
 
@@ -31,11 +31,11 @@ export async function loadProject(tsConfigAbsoluteFilePath: string, context: Pro
   const projectDirPath = normalizePath(context.path.dirname(tsConfigAbsoluteFilePath));
 
   const sourceFiles: {
-    [relativeFilePath: string]: TSSourceFileType;
+    [relativeFilePath: string]: TSSourceFileJSONType;
   } = {};
 
   project.getSourceFiles().forEach(sourceFile => {
-    return sourceFiles[normalizePath(context.path.relative(projectDirPath, sourceFile.getFilePath()))] = getFromSourceFile(sourceFile);
+    return sourceFiles[normalizePath(context.path.relative(projectDirPath, sourceFile.getFilePath()))] = compileSourceFileToJSON(sourceFile);
   });
 
   const referencedProjects: {
@@ -80,7 +80,7 @@ export async function saveProject(tsConfigAbsoluteFilePath: string, project: TSP
   const projectDirPath = context.path.dirname(tsConfigAbsoluteFilePath);
 
   // 再読み込みして古いソースファイルを用意する
-  let oldSourceFiles: TSSourceFilesType = {};
+  let oldSourceFiles: TSSourceFilesJSONType = {};
   try {
     oldSourceFiles = getSourceFilesByTSProject(await loadProject(tsConfigAbsoluteFilePath, context));
   } catch (_) { }
@@ -89,7 +89,7 @@ export async function saveProject(tsConfigAbsoluteFilePath: string, project: TSP
 }
 
 export function getSourceFilesByTSProject(project: TSProjectType) {
-  const sourceFiles: TSSourceFilesType = { ...project.sourceFiles };
+  const sourceFiles: TSSourceFilesJSONType = { ...project.sourceFiles };
   Object.assign(sourceFiles, ...Object.values(project.referencedProjects).map(referencedProject =>
     getSourceFilesByTSProject(referencedProject)
   ));
@@ -97,7 +97,7 @@ export function getSourceFilesByTSProject(project: TSProjectType) {
   return sourceFiles;
 }
 
-export async function saveDirectoryWithPerFiles(projectDirPath: string, newSourceFiles: TSSourceFilesType, oldSourceFiles: TSSourceFilesType, context: ProjectContext) {
+export async function saveDirectoryWithPerFiles(projectDirPath: string, newSourceFiles: TSSourceFilesJSONType, oldSourceFiles: TSSourceFilesJSONType, context: ProjectContext) {
   const newFilePaths = Object.keys(newSourceFiles);
   const oldFilePaths = Object.keys(oldSourceFiles);
 
@@ -110,10 +110,10 @@ export async function saveDirectoryWithPerFiles(projectDirPath: string, newSourc
     ),
     ...newFilePaths.map(async relativeFilePath => {
       const filePath = context.path.join(projectDirPath, relativeFilePath);
-      const oldSourceFile = oldSourceFiles[relativeFilePath] as TSSourceFileType | undefined;
-      const oldFullText = oldSourceFile && addFullText(oldSourceFile.syntaxList.children, undefined, undefined, oldSourceFile.commentRangesAtEndOfFile, oldSourceFile.whitespaces);
+      const oldSourceFile = oldSourceFiles[relativeFilePath] as TSSourceFileJSONType | undefined;
+      const oldFullText = oldSourceFile && generateTextFromJSON(oldSourceFile.syntaxList.children, undefined, undefined, oldSourceFile.commentRangesAtEndOfFile, oldSourceFile.whitespaces);
       const newSourceFile = newSourceFiles[relativeFilePath];
-      const fullText = addFullText(newSourceFile.syntaxList.children, undefined, undefined, newSourceFile.commentRangesAtEndOfFile, newSourceFile.whitespaces);
+      const fullText = generateTextFromJSON(newSourceFile.syntaxList.children, undefined, undefined, newSourceFile.commentRangesAtEndOfFile, newSourceFile.whitespaces);
       let shouldWrite = false;
 
       if (oldSourceFile) {

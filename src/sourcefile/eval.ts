@@ -1,4 +1,4 @@
-import type { TSNodeType, TSTextNodeType } from "./types";
+import type { TSNodeJSONType, TSTextNodeJSONType } from "./types";
 
 // TODO JSX
 // TODO varの再宣言と関数スコープ
@@ -32,15 +32,15 @@ export type ModuleType = { default?: any, object?: { [key: string]: any } };
 
 export type ExportAndReturnValueType = { exports: ModuleType, value?: any };
 
-export function evalVariableDeclarationList(variableDeclarationList: TSNodeType, variables: { [key: string]: any }[], isExport = false) {
+export function evalVariableDeclarationList(variableDeclarationList: TSNodeJSONType, variables: { [key: string]: any }[], isExport = false) {
   const syntaxList = variableDeclarationList.children[1];
   const exportProps: { [key: string]: any } = {};
   for (let n = 0; n < syntaxList.children.length; n += 2) {
-    const variableDeclaration = syntaxList.children[n] as TSNodeType;
+    const variableDeclaration = syntaxList.children[n] as TSNodeJSONType;
 
     // TODO ArrayBindingPattern
     if (variableDeclaration.children[0].kind === "Identifier") {
-      const identifier = variableDeclaration.children[0] as TSTextNodeType;
+      const identifier = variableDeclaration.children[0] as TSTextNodeJSONType;
 
       variables[variables.length - 1][identifier.text] = variableDeclaration.children.length === 1
         || variableDeclaration.children.length < 5 && variableDeclaration.children[1].kind === "ColonToken"
@@ -51,7 +51,7 @@ export function evalVariableDeclarationList(variableDeclarationList: TSNodeType,
         exportProps[identifier.text] = variables[variables.length - 1][identifier.text];
     } else if (variableDeclaration.children[0].kind === "ObjectBindingPattern")
       evalObjectBindingPattern(
-        variableDeclaration.children[0] as TSNodeType,
+        variableDeclaration.children[0] as TSNodeJSONType,
         variables,
         evalExpression(variableDeclaration.children[3 < variableDeclaration.children.length ? 4 : 2], variables)?.value,
         exportProps,
@@ -62,58 +62,58 @@ export function evalVariableDeclarationList(variableDeclarationList: TSNodeType,
   return exportProps;
 }
 
-export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [key: string]: any }[], modules: { [key: string]: ModuleType } = {}): ExportAndReturnValueType {
+export function evalSyntax(syntax: TSTextNodeJSONType | TSNodeJSONType, variables: { [key: string]: any }[], modules: { [key: string]: ModuleType } = {}): ExportAndReturnValueType {
   if (syntax.kind === "VariableStatement") {
     let isExport = syntax.children[0].kind === "SyntaxList";
 
-    const exportProps = evalVariableDeclarationList(syntax.children[isExport ? 1 : 0] as TSNodeType, variables, isExport);
+    const exportProps = evalVariableDeclarationList(syntax.children[isExport ? 1 : 0] as TSNodeJSONType, variables, isExport);
 
     // TODO リテラルの値を正しく共有する
     return { exports: { object: exportProps } };
   } else if (syntax.kind === "ExpressionStatement") {
-    evalExpression(syntax.children[0] as TSNodeType, variables);
+    evalExpression(syntax.children[0] as TSNodeJSONType, variables);
   } else if (syntax.kind === "IfStatement") {
-    if (evalExpression(syntax.children[2] as TSNodeType, variables)?.value) {
-      const res = evalBlockOrSyntax(syntax.children[4] as TSNodeType, variables);
+    if (evalExpression(syntax.children[2] as TSNodeJSONType, variables)?.value) {
+      const res = evalBlockOrSyntax(syntax.children[4] as TSNodeJSONType, variables);
       if (Object.keys(res).includes("value")) return res;
     } else if (syntax.children.length === 7)
-      return evalBlockOrSyntax(syntax.children[6] as TSNodeType, variables);
+      return evalBlockOrSyntax(syntax.children[6] as TSNodeJSONType, variables);
   } else if (syntax.kind === "ForStatement") {
     variables.push({});
 
     if (syntax.children[2].kind === "VariableDeclarationList")
-      evalVariableDeclarationList(syntax.children[2] as TSNodeType, variables);
+      evalVariableDeclarationList(syntax.children[2] as TSNodeJSONType, variables);
     else
-      evalSyntax(syntax.children[2] as TSNodeType, variables, modules);
+      evalSyntax(syntax.children[2] as TSNodeJSONType, variables, modules);
 
     let res;
-    while (evalExpression(syntax.children[4] as TSNodeType, variables)?.value) {
-      res = evalBlockOrSyntax(syntax.children[8] as TSNodeType, variables);
+    while (evalExpression(syntax.children[4] as TSNodeJSONType, variables)?.value) {
+      res = evalBlockOrSyntax(syntax.children[8] as TSNodeJSONType, variables);
 
       if (Object.keys(res).includes("value")) break;
 
-      evalExpression(syntax.children[6] as TSNodeType, variables);
+      evalExpression(syntax.children[6] as TSNodeJSONType, variables);
     }
 
     variables.pop();
 
     if (res && Object.keys(res).includes("value")) return res;
   } else if (syntax.kind === "ForOfStatement") {
-    const variableDeclarationList = syntax.children[2] as TSNodeType;
+    const variableDeclarationList = syntax.children[2] as TSNodeJSONType;
 
     const syntaxList = variableDeclarationList.children[1];
 
-    const variableDeclaration = syntaxList.children[0] as TSNodeType;
+    const variableDeclaration = syntaxList.children[0] as TSNodeJSONType;
 
-    const identifier = variableDeclaration.children[0] as TSTextNodeType;
+    const identifier = variableDeclaration.children[0] as TSTextNodeJSONType;
 
-    const iterable = evalExpression(syntax.children[4] as TSNodeType, variables)?.value;
+    const iterable = evalExpression(syntax.children[4] as TSNodeJSONType, variables)?.value;
 
     let res;
     for (let value of iterable) {
       variables.push({ [identifier.text]: value });
 
-      res = evalBlockOrSyntax(syntax.children[6] as TSNodeType, variables);
+      res = evalBlockOrSyntax(syntax.children[6] as TSNodeJSONType, variables);
 
       variables.pop();
 
@@ -126,7 +126,7 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
       exports: {},
       value: syntax.children.length < 3 && syntax.children[1].kind === "SemicolonToken" || syntax.children.length === 1
         ? undefined
-        : evalExpression(syntax.children[1] as TSNodeType, variables)?.value
+        : evalExpression(syntax.children[1] as TSNodeJSONType, variables)?.value
     };
   } else if (syntax.kind === "FunctionDeclaration") {
     let isExport = 0;
@@ -143,10 +143,10 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
     }
 
     // TODO ジェネレーター関数
-    const identifier = syntax.children[1 + n] as TSTextNodeType;
+    const identifier = syntax.children[1 + n] as TSTextNodeJSONType;
 
     variables[variables.length - 1][identifier.text] = getFunc(
-      syntax.children[(6 < syntax.children.length ? 7 : 5) + n] as TSNodeType,
+      syntax.children[(6 < syntax.children.length ? 7 : 5) + n] as TSNodeJSONType,
       syntax.children[3 + n],
       cloneScope(variables)
     );
@@ -161,36 +161,36 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
   } else if (syntax.kind === "ImportDeclaration") {
     if (syntax.children.length < 4) return { exports: {} };
 
-    const moduleName = evalStringLiteral(syntax.children[3] as TSTextNodeType);
+    const moduleName = evalStringLiteral(syntax.children[3] as TSTextNodeJSONType);
 
     const module = modules[moduleName];
 
-    const importClause = syntax.children[1] as TSNodeType;
+    const importClause = syntax.children[1] as TSNodeJSONType;
     if (importClause.children[0].kind === "TypeKeyword") return { exports: {} };
 
     if (!module) throw new Error(`Module '${moduleName}' is undefined`);
 
     let n = 0;
     if (importClause.children[0].kind === "Identifier") {
-      variables[0][(importClause.children[0] as TSTextNodeType).text] = module.default;
+      variables[0][(importClause.children[0] as TSTextNodeJSONType).text] = module.default;
       if (importClause.children.length < 2) return { exports: {} };
       n += 2;
     }
     if (importClause.children[n].kind === "NamespaceImport") {
-      const namespaceImport = importClause.children[n] as TSNodeType;
-      variables[0][(namespaceImport.children[2] as TSTextNodeType).text] = module.object;
+      const namespaceImport = importClause.children[n] as TSNodeJSONType;
+      variables[0][(namespaceImport.children[2] as TSTextNodeJSONType).text] = module.object;
     } else if (importClause.children[n].kind === "NamedImports") {
-      const namedImports = importClause.children[n] as TSNodeType;
+      const namedImports = importClause.children[n] as TSNodeJSONType;
       const syntaxList = namedImports.children[1];
 
       for (let n = 0; n < syntaxList.children.length; n += 2) {
         const importSpecifier = syntaxList.children[n];
-        const identifier = importSpecifier.children[0] as TSTextNodeType;
+        const identifier = importSpecifier.children[0] as TSTextNodeJSONType;
         const identifierText = identifier.kind === "StringLiteral" ? evalStringLiteral(identifier) : identifier.text;
         if (importSpecifier.children.length == 1)
           variables[0][identifierText] = module.object![identifierText];
         else if (importSpecifier.children.length == 3) {
-          const identifier1 = importSpecifier.children[2] as TSTextNodeType;
+          const identifier1 = importSpecifier.children[2] as TSTextNodeJSONType;
 
           if (identifierText === "default")
             variables[0][identifier1.text] = module.default;
@@ -202,12 +202,12 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
     }
   } else if (syntax.kind === "ExportAssignment") {
     // TODO リテラルの値を正しく共有する
-    return { exports: { default: evalExpression(syntax.children[2] as TSNodeType, variables)?.value } };
+    return { exports: { default: evalExpression(syntax.children[2] as TSNodeJSONType, variables)?.value } };
   } else if (syntax.kind === "ExportDeclaration") {
     const exports: ModuleType = { object: {} };
 
     if (syntax.children[1].kind === "AsteriskToken") {
-      const moduleName = evalStringLiteral(syntax.children[3] as TSTextNodeType);
+      const moduleName = evalStringLiteral(syntax.children[3] as TSTextNodeJSONType);
       const module = modules[moduleName];
 
       // TODO リテラルの値を正しく共有する
@@ -221,7 +221,7 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
       if (syntax.children.length < 4) {
         for (let n = 0; n < syntaxList.children.length; n += 2) {
           const exportSpecifier = syntaxList.children[n];
-          const identifier = exportSpecifier.children[0] as TSTextNodeType;
+          const identifier = exportSpecifier.children[0] as TSTextNodeJSONType;
           if (exportSpecifier.children.length < 2) {
             // TODO リテラルの値を正しく共有する
             if (identifier.text === "default")
@@ -229,7 +229,7 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
             else
               exports.object![identifier.text] = getVariableValue(variables, identifier.text);
           } else {
-            const identifier1 = exportSpecifier.children[2] as TSTextNodeType;
+            const identifier1 = exportSpecifier.children[2] as TSTextNodeJSONType;
             const identifier1Text = identifier1.kind === "StringLiteral" ? evalStringLiteral(identifier1) : identifier1.text;
 
             // TODO リテラルの値を正しく共有する
@@ -240,13 +240,13 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
           }
         }
       } else {
-        const moduleName = evalStringLiteral(syntax.children[3] as TSTextNodeType);
+        const moduleName = evalStringLiteral(syntax.children[3] as TSTextNodeJSONType);
         const module = modules[moduleName];
 
         for (let n = 0; n < syntaxList.children.length; n += 2) {
           const exportSpecifier = syntaxList.children[n];
           if (exportSpecifier.children.length < 2) {
-            const identifier = exportSpecifier.children[0] as TSTextNodeType;
+            const identifier = exportSpecifier.children[0] as TSTextNodeJSONType;
 
             // TODO リテラルの値を正しく共有する
             if (identifier.text === "default")
@@ -255,8 +255,8 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
               exports.object![identifier.text] = module.object![identifier.text];
             }
           } else {
-            const identifier = exportSpecifier.children[0] as TSTextNodeType;
-            const identifier1 = exportSpecifier.children[2] as TSTextNodeType;
+            const identifier = exportSpecifier.children[0] as TSTextNodeJSONType;
+            const identifier1 = exportSpecifier.children[2] as TSTextNodeJSONType;
 
             // TODO リテラルの値を正しく共有する
             if (identifier.text === "default")
@@ -273,13 +273,13 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
         }
       }
     } else if (syntax.children[1].kind === "NamespaceExport") {
-      const moduleName = evalStringLiteral(syntax.children[3] as TSTextNodeType);
+      const moduleName = evalStringLiteral(syntax.children[3] as TSTextNodeJSONType);
       const module = modules[moduleName];
 
       // TODO module.defaultの扱いは正しいか？
       // TODO リテラルの値を正しく共有する
-      const namespaceExport = syntax.children[1] as TSNodeType;
-      exports.object![(namespaceExport.children[2] as TSTextNodeType).text] = module.default
+      const namespaceExport = syntax.children[1] as TSNodeJSONType;
+      exports.object![(namespaceExport.children[2] as TSTextNodeJSONType).text] = module.default
         ? { default: module.default, ...module.object }
         : { ...module.object };
     }
@@ -298,11 +298,11 @@ export function evalSyntax(syntax: TSTextNodeType | TSNodeType, variables: { [ke
   return { exports: {} };
 }
 
-export function evalSyntaxList(syntaxList: TSNodeType, variables: { [key: string]: any }[], modules?: { [key: string]: ModuleType }): ExportAndReturnValueType | undefined {
+export function evalSyntaxList(syntaxList: TSNodeJSONType, variables: { [key: string]: any }[], modules?: { [key: string]: ModuleType }): ExportAndReturnValueType | undefined {
   let exports: ModuleType = {};
 
   for (const child of syntaxList.children) {
-    const res = evalSyntax(child as TSNodeType, variables, modules);
+    const res = evalSyntax(child as TSNodeJSONType, variables, modules);
 
     // TODO リテラルの値を正しく共有する
     if (res.exports.default)
@@ -330,24 +330,24 @@ export function assignVariable(variables: { [key: string]: any }[], key: string,
       return variables[n][key] = value;
 }
 
-export function evalExpression(syntax: TSTextNodeType | TSNodeType, variables: { [key: string]: any }[]): { value: any, assignmentFunc: ((value: any) => any) | undefined } | undefined {
+export function evalExpression(syntax: TSTextNodeJSONType | TSNodeJSONType, variables: { [key: string]: any }[]): { value: any, assignmentFunc: ((value: any) => any) | undefined } | undefined {
   if (syntax.kind === "NumericLiteral") {
-    return { value: Number((syntax as TSTextNodeType).text), assignmentFunc: undefined };
+    return { value: Number((syntax as TSTextNodeJSONType).text), assignmentFunc: undefined };
   } else if (syntax.kind === "StringLiteral") {
-    return { value: evalStringLiteral(syntax as TSTextNodeType), assignmentFunc: undefined };
+    return { value: evalStringLiteral(syntax as TSTextNodeJSONType), assignmentFunc: undefined };
   } else if (syntax.kind === "Identifier") {
-    return { value: getVariableValue(variables, (syntax as TSTextNodeType).text), assignmentFunc: (value: any) => assignVariable(variables, (syntax as TSTextNodeType).text, value) };
+    return { value: getVariableValue(variables, (syntax as TSTextNodeJSONType).text), assignmentFunc: (value: any) => assignVariable(variables, (syntax as TSTextNodeJSONType).text, value) };
   } else if (syntax.kind === "ComputedPropertyName") {
-    return evalExpression(syntax.children[1] as TSNodeType, variables);
+    return evalExpression(syntax.children[1] as TSNodeJSONType, variables);
   } else if (syntax.kind === "ArrayLiteralExpression") {
     const syntaxList = syntax.children[1];
 
     const list: any[] = [];
     for (let n = 0; n < syntaxList.children.length; n += 2) {
       if (syntaxList.children[n].kind === "SpreadElement")
-        list.push(...evalExpression(syntaxList.children[n].children[1] as TSNodeType, variables)?.value);
+        list.push(...evalExpression(syntaxList.children[n].children[1] as TSNodeJSONType, variables)?.value);
       else
-        list.push(evalExpression(syntaxList.children[n] as TSNodeType, variables)?.value);
+        list.push(evalExpression(syntaxList.children[n] as TSNodeJSONType, variables)?.value);
     }
 
     return { value: list, assignmentFunc: undefined };
@@ -358,21 +358,21 @@ export function evalExpression(syntax: TSTextNodeType | TSNodeType, variables: {
     const object: any = {};
     for (let n = 0; n < syntaxList.children.length; n += 2) {
       if (syntaxList.children[n].kind === "PropertyAssignment") {
-        const identifierOrComputedPropertyName = syntaxList.children[n].children[0] as TSNodeType;
+        const identifierOrComputedPropertyName = syntaxList.children[n].children[0] as TSNodeJSONType;
         object[
           identifierOrComputedPropertyName.kind === "Identifier"
-            ? (identifierOrComputedPropertyName as TSTextNodeType).text
+            ? (identifierOrComputedPropertyName as TSTextNodeJSONType).text
             : evalExpression(identifierOrComputedPropertyName, variables)?.value
-        ] = evalExpression(syntaxList.children[n].children[2] as TSNodeType, variables)?.value;
+        ] = evalExpression(syntaxList.children[n].children[2] as TSNodeJSONType, variables)?.value;
       } else if (syntaxList.children[n].kind === "ShorthandPropertyAssignment") {
-        const identifier = syntaxList.children[n].children[0] as TSTextNodeType;
+        const identifier = syntaxList.children[n].children[0] as TSTextNodeJSONType;
         object[identifier.text] = evalExpression(identifier, variables)?.value;
       }
     }
 
     return { value: object, assignmentFunc: undefined };
   } else if (syntax.kind === "PropertyAccessExpression") {
-    const object = evalExpression(syntax.children[0] as TSNodeType, variables)?.value;
+    const object = evalExpression(syntax.children[0] as TSNodeJSONType, variables)?.value;
     if (object === undefined)
       if (syntax.children[1].kind === "DotToken")
         throw new Error(`${addChildCodeTextForLog(syntax.children[0])} is undefined`);
@@ -382,30 +382,30 @@ export function evalExpression(syntax: TSTextNodeType | TSNodeType, variables: {
           assignmentFunc: undefined
         };
 
-    const newValue = object[(syntax.children[2] as TSTextNodeType).text];
+    const newValue = object[(syntax.children[2] as TSTextNodeJSONType).text];
     return {
       value:
         typeof newValue === "function"
           ? newValue.bind(object)
           : newValue,
-      assignmentFunc: (value: any) => object[(syntax.children[2] as TSTextNodeType).text] = value
+      assignmentFunc: (value: any) => object[(syntax.children[2] as TSTextNodeJSONType).text] = value
     };
   } else if (syntax.kind === "ElementAccessExpression") {
-    const expression = evalExpression(syntax.children[0] as TSNodeType, variables);
-    const expression1 = evalExpression(syntax.children[2] as TSNodeType, variables);
+    const expression = evalExpression(syntax.children[0] as TSNodeJSONType, variables);
+    const expression1 = evalExpression(syntax.children[2] as TSNodeJSONType, variables);
 
     return { value: expression!.value[expression1!.value], assignmentFunc: (value: any) => expression!.value[expression1!.value] = value };
   } else if (syntax.kind === "CallExpression") {
-    const func = evalExpression(syntax.children[0] as TSNodeType, variables)?.value;
+    const func = evalExpression(syntax.children[0] as TSNodeJSONType, variables)?.value;
 
     const syntaxList = syntax.children[2];
 
     const args: any[] = [];
     for (let n = 0; n < syntaxList.children.length; n += 2) {
       if (syntaxList.children[n].kind === "SpreadElement") {
-        args.push(...evalExpression(syntaxList.children[n].children[1] as TSNodeType, variables)?.value);
+        args.push(...evalExpression(syntaxList.children[n].children[1] as TSNodeJSONType, variables)?.value);
       } else
-        args.push(evalExpression(syntaxList.children[n] as TSNodeType, variables)?.value);
+        args.push(evalExpression(syntaxList.children[n] as TSNodeJSONType, variables)?.value);
     }
 
     if (typeof func !== "function")
@@ -413,40 +413,40 @@ export function evalExpression(syntax: TSTextNodeType | TSNodeType, variables: {
 
     return { value: func(...args), assignmentFunc: undefined };
   } else if (syntax.kind === "ParenthesizedExpression") {
-    return evalExpression(syntax.children[1] as TSNodeType, variables);
+    return evalExpression(syntax.children[1] as TSNodeJSONType, variables);
   } else if (syntax.kind === "PrefixUnaryExpression") {
     if (syntax.children[0].kind === "PlusToken")
-      return { value: +evalExpression(syntax.children[1] as TSNodeType, variables)?.value, assignmentFunc: undefined };
+      return { value: +evalExpression(syntax.children[1] as TSNodeJSONType, variables)?.value, assignmentFunc: undefined };
     else if (syntax.children[0].kind === "MinusToken")
-      return { value: -evalExpression(syntax.children[1] as TSNodeType, variables)?.value, assignmentFunc: undefined };
+      return { value: -evalExpression(syntax.children[1] as TSNodeJSONType, variables)?.value, assignmentFunc: undefined };
     else if (syntax.children[0].kind === "PlusPlusToken") {
-      const right = evalExpression(syntax.children[1] as TSNodeType, variables);
+      const right = evalExpression(syntax.children[1] as TSNodeJSONType, variables);
       return { value: right?.assignmentFunc!(++right.value), assignmentFunc: undefined };
     } else if (syntax.children[0].kind === "MinusMinusToken") {
-      const right = evalExpression(syntax.children[1] as TSNodeType, variables);
+      const right = evalExpression(syntax.children[1] as TSNodeJSONType, variables);
       return { value: right?.assignmentFunc!(--right.value), assignmentFunc: undefined };
     } else if (syntax.children[0].kind === "ExclamationToken")
-      return { value: !evalExpression(syntax.children[1] as TSNodeType, variables)?.value, assignmentFunc: undefined };
+      return { value: !evalExpression(syntax.children[1] as TSNodeJSONType, variables)?.value, assignmentFunc: undefined };
     else if (syntax.children[0].kind === "TildeToken")
-      return { value: ~evalExpression(syntax.children[1] as TSNodeType, variables)?.value, assignmentFunc: undefined };
+      return { value: ~evalExpression(syntax.children[1] as TSNodeJSONType, variables)?.value, assignmentFunc: undefined };
     else
       throw new Error();
   } else if (syntax.kind === "PostfixUnaryExpression") {
     if (syntax.children[1].kind === "PlusPlusToken") {
-      const left = evalExpression(syntax.children[0] as TSNodeType, variables);
+      const left = evalExpression(syntax.children[0] as TSNodeJSONType, variables);
       const value = left?.value;
       left?.assignmentFunc!(++left.value);
       return { value, assignmentFunc: undefined };
     } else if (syntax.children[1].kind === "MinusMinusToken") {
-      const left = evalExpression(syntax.children[0] as TSNodeType, variables);
+      const left = evalExpression(syntax.children[0] as TSNodeJSONType, variables);
       const value = left?.value;
       left?.assignmentFunc!(--left.value);
       return { value, assignmentFunc: undefined };
     } else
       throw new Error();
   } else if (syntax.kind === "BinaryExpression") {
-    const left = evalExpression(syntax.children[0] as TSNodeType, variables);
-    const right = evalExpression(syntax.children[2] as TSNodeType, variables);
+    const left = evalExpression(syntax.children[0] as TSNodeJSONType, variables);
+    const right = evalExpression(syntax.children[2] as TSNodeJSONType, variables);
 
     if (syntax.children[1].kind === "CommaToken")
       return { value: right?.value, assignmentFunc: undefined };
@@ -537,19 +537,19 @@ export function evalExpression(syntax: TSTextNodeType | TSNodeType, variables: {
   } else if (syntax.kind === "ArrowFunction") {
     return {
       value: getFunc(
-        syntax.children[3 < syntax.children.length ? 4 : 2] as TSNodeType,
+        syntax.children[3 < syntax.children.length ? 4 : 2] as TSNodeJSONType,
         syntax.children[3 < syntax.children.length ? 1 : 0],
         cloneScope(variables)
       ), assignmentFunc: undefined
     };
   } else if (syntax.kind === "ConditionalExpression") {
-    return evalExpression(syntax.children[0] as TSNodeType, variables)?.value
-      ? evalExpression(syntax.children[2] as TSNodeType, variables)
-      : evalExpression(syntax.children[4] as TSNodeType, variables);
+    return evalExpression(syntax.children[0] as TSNodeJSONType, variables)?.value
+      ? evalExpression(syntax.children[2] as TSNodeJSONType, variables)
+      : evalExpression(syntax.children[4] as TSNodeJSONType, variables);
   } else if (syntax.kind === "AsExpression") {
-    return evalExpression(syntax.children[0] as TSNodeType, variables);
+    return evalExpression(syntax.children[0] as TSNodeJSONType, variables);
   } else if (syntax.kind === "NonNullExpression") {
-    return evalExpression(syntax.children[0] as TSNodeType, variables);
+    return evalExpression(syntax.children[0] as TSNodeJSONType, variables);
   }/* else if (syntax.kind === "VariableDeclarationList") {
     // TODO
   }*/ else
@@ -564,7 +564,7 @@ export function cloneScope(variables: { [key: string]: any }[]) {
   })];
 }
 
-export function evalBlockOrSyntax(node: TSNodeType, variables: { [key: string]: any }[]): ExportAndReturnValueType {
+export function evalBlockOrSyntax(node: TSNodeJSONType, variables: { [key: string]: any }[]): ExportAndReturnValueType {
   if (node.kind === "Block") {
     variables.push({});
 
@@ -576,15 +576,15 @@ export function evalBlockOrSyntax(node: TSNodeType, variables: { [key: string]: 
     return evalSyntax(node, variables);
 }
 
-export function getFunc(blockOrSyntax: TSNodeType, parametersSyntaxList: TSNodeType, variables: { [key: string]: any }[]) {
+export function getFunc(blockOrSyntax: TSNodeJSONType, parametersSyntaxList: TSNodeJSONType, variables: { [key: string]: any }[]) {
   return (...args: any) => {
     variables.push({});
     for (let n = 0; n < args.length && n * 2 < parametersSyntaxList.children.length; n++) {
-      const parameter = parametersSyntaxList.children[n * 2] as TSNodeType;
+      const parameter = parametersSyntaxList.children[n * 2] as TSNodeJSONType;
       if (parameter.children[0].kind === "Identifier")
-        variables[variables.length - 1][(parameter.children[0] as TSTextNodeType).text] = args[n];
+        variables[variables.length - 1][(parameter.children[0] as TSTextNodeJSONType).text] = args[n];
       else if (parameter.children[0].kind === "ObjectBindingPattern")
-        evalObjectBindingPattern(parameter.children[0] as TSNodeType, variables, args[n]);
+        evalObjectBindingPattern(parameter.children[0] as TSNodeJSONType, variables, args[n]);
     }
 
     const res = evalBlockOrSyntax(blockOrSyntax, variables)?.value;
@@ -594,21 +594,21 @@ export function getFunc(blockOrSyntax: TSNodeType, parametersSyntaxList: TSNodeT
   };
 }
 
-export function evalObjectBindingPattern(objectBindingPattern: TSNodeType, variables: { [key: string]: any }[], object: any, exportProps: { [key: string]: any } = {}, isExport = false) {
+export function evalObjectBindingPattern(objectBindingPattern: TSNodeJSONType, variables: { [key: string]: any }[], object: any, exportProps: { [key: string]: any } = {}, isExport = false) {
   const syntaxList = objectBindingPattern.children[1];
   for (let o = 0; o < syntaxList.children.length; o += 2) {
-    const bindingElement = syntaxList.children[o] as TSNodeType;
+    const bindingElement = syntaxList.children[o] as TSNodeJSONType;
     if (2 < bindingElement.children.length) {
-      const identifier = bindingElement.children[0] as TSTextNodeType;
+      const identifier = bindingElement.children[0] as TSTextNodeJSONType;
       if (bindingElement.children[2].kind === "Identifier") {
-        variables[variables.length - 1][(bindingElement.children[2] as TSTextNodeType).text] = object[identifier.text];
+        variables[variables.length - 1][(bindingElement.children[2] as TSTextNodeJSONType).text] = object[identifier.text];
 
         if (isExport)
-          exportProps[identifier.text] = variables[variables.length - 1][(bindingElement.children[2] as TSTextNodeType).text];
+          exportProps[identifier.text] = variables[variables.length - 1][(bindingElement.children[2] as TSTextNodeJSONType).text];
       } else if (bindingElement.children[2].kind === "ObjectBindingPattern")
-        evalObjectBindingPattern(bindingElement.children[2] as TSNodeType, variables, object[identifier.text], exportProps, isExport);
+        evalObjectBindingPattern(bindingElement.children[2] as TSNodeJSONType, variables, object[identifier.text], exportProps, isExport);
     } else {
-      const identifier = bindingElement.children[0] as TSTextNodeType;
+      const identifier = bindingElement.children[0] as TSTextNodeJSONType;
       variables[variables.length - 1][identifier.text] = object[identifier.text];
 
       if (isExport)
@@ -617,34 +617,34 @@ export function evalObjectBindingPattern(objectBindingPattern: TSNodeType, varia
   }
 }
 
-export function addChildCodeTextForLog(nodeJson: TSNodeType, text = "") {
+export function addChildCodeTextForLog(nodeJson: TSNodeJSONType, text = "") {
   if (nodeJson.children.length)
     nodeJson.children.forEach(childJson => text += addChildCodeTextForLog(childJson));
   else
-    text += (nodeJson as TSTextNodeType).text;
+    text += (nodeJson as TSTextNodeJSONType).text;
 
   return text;
 }
 
-export function evalStringLiteral(stringLiteral: TSTextNodeType) {
+export function evalStringLiteral(stringLiteral: TSTextNodeJSONType) {
   return stringLiteral.text.substring(1, stringLiteral.text.length - 1);
 }
 
-export function getDependentModuleNames(syntaxList: TSNodeType) {
+export function getDependentModuleNames(syntaxList: TSNodeJSONType) {
   const modules: string[] = [];
 
   for (const syntax of syntaxList.children) {
     if (syntax.kind === "ImportDeclaration") {
       if (syntax.children.length >= 4)
-        modules.push(evalStringLiteral(syntax.children[3] as TSTextNodeType));
+        modules.push(evalStringLiteral(syntax.children[3] as TSTextNodeJSONType));
     } else if (syntax.kind === "ExportDeclaration") {
       if (syntax.children[1].kind === "AsteriskToken")
-        modules.push(evalStringLiteral(syntax.children[3] as TSTextNodeType));
+        modules.push(evalStringLiteral(syntax.children[3] as TSTextNodeJSONType));
       else if (syntax.children[1].kind === "NamedExports") {
         if (syntax.children.length >= 4)
-          modules.push(evalStringLiteral(syntax.children[3] as TSTextNodeType));
+          modules.push(evalStringLiteral(syntax.children[3] as TSTextNodeJSONType));
       } else if (syntax.children[1].kind === "NamespaceExport")
-        modules.push(evalStringLiteral(syntax.children[3] as TSTextNodeType));
+        modules.push(evalStringLiteral(syntax.children[3] as TSTextNodeJSONType));
     }
   }
 

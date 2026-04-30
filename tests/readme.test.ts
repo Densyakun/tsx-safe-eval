@@ -1,11 +1,11 @@
-import { addFullText, evalSyntaxList, getFromSourceFile } from '../src/index';
+import { generateTextFromJSON, evalSyntaxList, compileSourceFileToJSON } from '../src/index';
 import { Project } from 'ts-morph';
 
 describe('README.md usage', () => {
   it('should evaluate expression from README correctly', () => {
     const project = new Project({ useInMemoryFileSystem: true });
     const sourceFile = project.createSourceFile("test.ts", "export const a = 1 + 2;");
-    const sourceFileJson = getFromSourceFile(sourceFile);
+    const sourceFileJson = compileSourceFileToJSON(sourceFile);
 
     const variables = [{}]; // スコープ
     const modules = {};    // インポート可能なモジュール
@@ -21,9 +21,9 @@ describe('README.md usage', () => {
  */
 function a(a) {}`;
     const sourceFile = project.createSourceFile("test.ts", fullText);
-    const sourceFileJson = getFromSourceFile(sourceFile);
+    const sourceFileJson = compileSourceFileToJSON(sourceFile);
 
-    const printedFullText = addFullText(sourceFileJson.syntaxList.children, undefined, undefined, sourceFileJson.commentRangesAtEndOfFile, sourceFileJson.whitespaces);
+    const printedFullText = generateTextFromJSON(sourceFileJson.syntaxList.children, undefined, undefined, sourceFileJson.commentRangesAtEndOfFile, sourceFileJson.whitespaces);
     expect(printedFullText).toBe(fullText);
   });
 });

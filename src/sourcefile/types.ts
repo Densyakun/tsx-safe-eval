@@ -533,12 +533,12 @@ export const TSTextNodeKindArray = [
 
 export type TSTextNodeKindString = typeof TSTextNodeKindArray[number];
 
-export type TSNodeType = ({
+export type TSNodeJSONType = ({
   kind: SyntaxKindString;
-  children: (TSNodeType | TSTextNodeType)[];
+  children: (TSNodeJSONType | TSTextNodeJSONType)[];
 });
 
-export type TSTextNodeType = TSNodeType & ({
+export type TSTextNodeJSONType = TSNodeJSONType & ({
   children: never[];
   text: string;
   leadingCommentRanges: string[];
@@ -546,16 +546,16 @@ export type TSTextNodeType = TSNodeType & ({
   whitespaces: string[];
 });
 
-export type TSSyntaxListType = TSNodeType & {
+export type TSSyntaxListJSONType = TSNodeJSONType & {
   kind: "SyntaxList";
 };
 
-export type TSSourceFileType = {
-  syntaxList: TSSyntaxListType;
+export type TSSourceFileJSONType = {
+  syntaxList: TSSyntaxListJSONType;
   commentRangesAtEndOfFile: string[];
   whitespaces: string[];
 };
 
-export type TSSourceFilesType = {
-  [relativeFilePath: string]: TSSourceFileType;
+export type TSSourceFilesJSONType = {
+  [relativeFilePath: string]: TSSourceFileJSONType;
 };

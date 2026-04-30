@@ -1,7 +1,7 @@
-import { TSSourceFilesType } from "./sourcefile/types";
+import { TSSourceFilesJSONType } from "./sourcefile/types";
 
 export type TSProjectType = {
-  sourceFiles: TSSourceFilesType;
+  sourceFiles: TSSourceFilesJSONType;
   tsConfig: TSConfig;
   referencedProjects: TSReferencedProjectsType;
 };
