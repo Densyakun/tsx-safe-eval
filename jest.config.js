@@ -8,4 +8,10 @@ module.exports = {
   transform: {
     ...tsJestTransformCfg,
   },
+  transformIgnorePatterns: [
+    "node_modules/(?!(strip-json-comments)/)"
+  ],
+  moduleNameMapper: {
+    "strip-json-comments": "<rootDir>/tests/__mocks__/strip-json-comments.js"
+  }
 };
