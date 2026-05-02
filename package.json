@@ -24,12 +24,14 @@
   "dependencies": {
     "i-want-to-go-home": "^0.1.0",
     "normalize-path": "^3.0.0",
+    "path-browserify": "^1.0.1",
     "strip-json-comments": "^5.0.3",
     "ts-morph": "^25.0.0"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/normalize-path": "^3.0.2",
+    "@types/path-browserify": "^1.0.3",
     "jest": "^30.3.0",
     "ts-jest": "^29.4.9",
     "tsup": "^8.3.6",

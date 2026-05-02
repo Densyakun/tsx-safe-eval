@@ -8,9 +8,9 @@ describe('README.md usage', () => {
     const sourceFileJson = compileSourceFileToJSON(sourceFile);
 
     const variables = [{}]; // スコープ
-    const modules = {};    // インポート可能なモジュール
+    const modules: { [key: string]: any } = {};    // インポート可能なモジュール
 
-    const result = evalSyntaxList(sourceFileJson.syntaxList, variables, modules);
+    const result = evalSyntaxList(sourceFileJson.syntaxList, variables, (name: string) => modules[name]);
     expect(result!.exports!.object!.a).toBe(3);
   });
 
