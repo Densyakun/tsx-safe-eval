@@ -761,7 +761,7 @@ export function evalExpression(syntax: TSTextNodeJSONType | TSNodeJSONType, vari
   } else if (syntax.kind === "JsxText") {
     return { value: (syntax as TSTextNodeJSONType).text, assignmentFunc: undefined };
   } else
-    throw new Error(syntax.kind);
+    throw new Error(`Unsupported syntax kind: ${syntax.kind}`);
 }
 
 function evalJsxSelfClosingElement(syntax: TSNodeJSONType, variables: { [key: string]: any }[]) {
