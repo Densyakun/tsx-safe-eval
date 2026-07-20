@@ -1,6 +1,5 @@
 import type { TSNodeJSONType, TSTextNodeJSONType } from "./types";
 
-// TODO JSX
 // TODO varの再宣言と関数スコープ
 // TODO false, true, null, this (Expressionとして対応)
 // TODO undefined keyword (Identifier)
@@ -520,6 +519,12 @@ export function evalExpression(syntax: TSTextNodeJSONType | TSNodeJSONType, vari
     return { value: Number((syntax as TSTextNodeJSONType).text), assignmentFunc: undefined };
   } else if (syntax.kind === "StringLiteral") {
     return { value: evalStringLiteral(syntax as TSTextNodeJSONType), assignmentFunc: undefined };
+  } else if (syntax.kind === "TrueKeyword") {
+    return { value: true, assignmentFunc: undefined };
+  } else if (syntax.kind === "FalseKeyword") {
+    return { value: false, assignmentFunc: undefined };
+  } else if (syntax.kind === "NullKeyword") {
+    return { value: null, assignmentFunc: undefined };
   } else if (syntax.kind === "Identifier") {
     return { value: getVariableValue(variables, (syntax as TSTextNodeJSONType).text), assignmentFunc: (value: any) => assignVariable(variables, (syntax as TSTextNodeJSONType).text, value) };
   } else if (syntax.kind === "ComputedPropertyName") {
@@ -735,10 +740,135 @@ export function evalExpression(syntax: TSTextNodeJSONType | TSNodeJSONType, vari
     return evalExpression(syntax.children[0] as TSNodeJSONType, variables);
   } else if (syntax.kind === "NonNullExpression") {
     return evalExpression(syntax.children[0] as TSNodeJSONType, variables);
-  }/* else if (syntax.kind === "VariableDeclarationList") {
-    // TODO
-  }*/ else
+  } else if (syntax.kind === "JsxSelfClosingElement") {
+    return evalJsxSelfClosingElement(syntax as TSNodeJSONType, variables);
+  } else if (syntax.kind === "JsxElement") {
+    return evalJsxElement(syntax as TSNodeJSONType, variables);
+  } else if (syntax.kind === "JsxFragment") {
+    return evalJsxFragment(syntax as TSNodeJSONType, variables);
+  } else if (syntax.kind === "JsxOpeningElement") {
+    return evalJsxOpeningElement(syntax as TSNodeJSONType, variables);
+  } else if (syntax.kind === "JsxExpression") {
+    return evalExpression(syntax.children[1] as TSNodeJSONType, variables);
+  } else if (syntax.kind === "JsxAttributes") {
+    return evalJsxAttributes(syntax as TSNodeJSONType, variables);
+  } else if (syntax.kind === "JsxAttribute") {
+    return evalJsxAttribute(syntax as TSNodeJSONType, variables);
+  } else if (syntax.kind === "JsxNamespacedName") {
+    const ns = (syntax.children[0] as TSTextNodeJSONType).text;
+    const name = (syntax.children[2] as TSTextNodeJSONType).text;
+    return { value: `${ns}:${name}`, assignmentFunc: undefined };
+  } else if (syntax.kind === "JsxText") {
+    return { value: (syntax as TSTextNodeJSONType).text, assignmentFunc: undefined };
+  } else
     throw new Error(syntax.kind);
+}
+
+function evalJsxSelfClosingElement(syntax: TSNodeJSONType, variables: { [key: string]: any }[]) {
+  const componentName = (syntax.children[1] as TSTextNodeJSONType).text;
+  const component = getVariableValue(variables, componentName);
+  const attrsNode = syntax.children[2];
+  const props = attrsNode.kind === "JsxAttributes"
+    ? (evalExpression(attrsNode, variables)?.value ?? {})
+    : {};
+
+  if (typeof component === 'function') {
+    return { value: component(props), assignmentFunc: undefined };
+  }
+  return { value: null, assignmentFunc: undefined };
+}
+
+function evalJsxElement(syntax: TSNodeJSONType, variables: { [key: string]: any }[]) {
+  const openingResult = evalJsxOpeningElement(syntax.children[0] as TSNodeJSONType, variables);
+  const props = openingResult.value.props;
+  const component = openingResult.value.component;
+
+  const childrenSyntaxList = syntax.children[1] as TSNodeJSONType;
+  const children: any[] = [];
+  if (childrenSyntaxList.kind === "SyntaxList") {
+    for (const child of childrenSyntaxList.children) {
+      const result = evalExpression(child as TSNodeJSONType, variables);
+      if (result?.value !== undefined && result.value !== null) {
+        children.push(result.value);
+      }
+    }
+  }
+
+  if (typeof component === 'function') {
+    return { value: component({ ...props, children }), assignmentFunc: undefined };
+  }
+  return { value: null, assignmentFunc: undefined };
+}
+
+function evalJsxOpeningElement(syntax: TSNodeJSONType, variables: { [key: string]: any }[]) {
+  const componentName = (syntax.children[1] as TSTextNodeJSONType).text;
+  const component = getVariableValue(variables, componentName);
+  const attrs = syntax.children[2];
+  const props = attrs.kind === "JsxAttributes"
+    ? (evalExpression(attrs, variables)?.value ?? {})
+    : {};
+  return { value: { component, props }, assignmentFunc: undefined };
+}
+
+function evalJsxAttributes(syntax: TSNodeJSONType, variables: { [key: string]: any }[]) {
+  const props: any = {};
+  const syntaxList = syntax.children[0];
+  if (syntaxList.kind === "SyntaxList") {
+    for (const child of syntaxList.children) {
+      if (child.kind === "JsxAttribute") {
+        const result = evalJsxAttribute(child as TSNodeJSONType, variables);
+        if (result) {
+          const nameNode = child.children[0];
+          let attrName: string;
+          if (nameNode.kind === "JsxNamespacedName") {
+            const ns = (nameNode.children[0] as TSTextNodeJSONType).text;
+            const name = (nameNode.children[2] as TSTextNodeJSONType).text;
+            attrName = `${ns}:${name}`;
+          } else {
+            attrName = (nameNode as TSTextNodeJSONType).text;
+          }
+          props[attrName] = result.value;
+        }
+      } else if (child.kind === "JsxSpreadAttribute") {
+        const spreadObj = evalExpression(child.children[2] as TSNodeJSONType, variables)?.value;
+        if (spreadObj && typeof spreadObj === 'object') {
+          Object.assign(props, spreadObj);
+        }
+      }
+    }
+  }
+  return { value: props, assignmentFunc: undefined };
+}
+
+function evalJsxAttribute(syntax: TSNodeJSONType, variables: { [key: string]: any }[]) {
+  if (syntax.children.length <= 1) {
+    return { value: true, assignmentFunc: undefined };
+  }
+  const valueNode = syntax.children[2];
+  if (valueNode.kind === "JsxExpression") {
+    return evalExpression(valueNode.children[1] as TSNodeJSONType, variables);
+  } else if (valueNode.kind === "StringLiteral") {
+    return { value: evalStringLiteral(valueNode as TSTextNodeJSONType), assignmentFunc: undefined };
+  } else if (valueNode.kind === "JsxElement" || valueNode.kind === "JsxSelfClosingElement" || valueNode.kind === "JsxFragment") {
+    return evalExpression(valueNode as TSNodeJSONType, variables);
+  }
+  return { value: true, assignmentFunc: undefined };
+}
+
+function evalJsxFragment(syntax: TSNodeJSONType, variables: { [key: string]: any }[]) {
+  // <>children</>
+  // children: JsxOpeningFragment, SyntaxList (children), JsxClosingFragment
+  const childrenSyntaxList = syntax.children[1] as TSNodeJSONType;
+  const children: any[] = [];
+  if (childrenSyntaxList.kind === "SyntaxList") {
+    for (const child of childrenSyntaxList.children) {
+      const result = evalExpression(child as TSNodeJSONType, variables);
+      if (result?.value !== undefined && result.value !== null) {
+        children.push(result.value);
+      }
+    }
+  }
+  return { value: children, assignmentFunc: undefined };
 }
 
 export function cloneScope(variables: { [key: string]: any }[]) {
